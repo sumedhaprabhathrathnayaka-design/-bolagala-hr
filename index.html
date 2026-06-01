@@ -1593,7 +1593,7 @@ function pushReq(req){ var u=getBackendUrl();if(!u)return;fetch(u,{method:'POST'
 function pushSt(id,st,amt){ var u=getBackendUrl();if(!u)return;fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'updateRequest',payload:{id:id,status:st,approvedAmount:amt||''}})}).catch(function(){}); }
 function pullAll(){
   var u=getBackendUrl();if(!u){toast('No backend URL');return;}
-  fetch(u+'?action=pullAll').then(function(r){return r.json();}).then(function(d){
+  fetch(u+'?action=pullAll',{redirect:'follow'}).then(function(r){return r.json();}).then(function(d){
     if(d.workers)d.workers.forEach(function(w){var ex=S.workers.find(function(e){return e.id===w.id;});if(ex){ex.name=w.name||ex.name;ex.pos=w.pos||ex.pos;ex.dept=w.dept||ex.dept;ex.basic=w.salary||w.basic||ex.basic;ex.otRate=w.otRate!=null?w.otRate:ex.otRate;ex.adv=w.adv!=null?w.adv:ex.adv;}else S.workers.push({id:w.id,name:w.name,pos:w.pos||'Staff',dept:w.dept||'--',basic:w.salary||w.basic||0,otRate:w.otRate||0,adv:0});});
     if(d.events)d.events.forEach(function(ev){if(!S.events.find(function(e){return e.id===ev.id;}))S.events.push({id:ev.id,wid:ev.workerId||ev.wid,type:ev.type,date:ev.dateKey||ev.date,time:ev.time,shift:ev.shift||'A',photo:ev.photoUrl||ev.photo||'',lat:ev.lat,lng:ev.lng});});
     if(d.requests)d.requests.forEach(function(r){var ex=S.requests.find(function(x){return x.id===r.id;});if(ex)ex.st=r.status||r.st;else S.requests.push({id:r.id,wid:r.workerId||r.wid,type:r.t||r.type||'leave',kind:r.k||r.kind||'',from:r.f||r.from||'',to:r.to||'',reason:r.r||r.reason||'',amt:r.amt||r.amount||0,approvedAmt:r.approvedAmount||null,st:r.status||r.st||'pending',ts:r.ts||Date.now()});});

@@ -1,15 +1,19 @@
 /* ================================================================
-   Bolagala Agro Floating Resort — Service Worker v2
+   Bolagala Agro Floating Resort — Service Worker v3
    Offline-first PWA for HR / Attendance System
    ================================================================ */
-const CACHE = "bolagala-hr-v2";
-const STATIC = ["./", "./index.html", "./manifest.json"];
+const CACHE = "bolagala-hr-v3";
+const STATIC = [
+  "./", "./index.html",
+  "./manifest.json", "./manifest-admin.json",
+  "./icon-192.png", "./icon-512.png"
+];
 
 /* Install — pre-cache static shell */
 self.addEventListener("install", e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(STATIC).catch(() => {}))
+      .then(c => Promise.allSettled(STATIC.map(u => c.add(u))))
       .then(() => self.skipWaiting())
   );
 });
@@ -28,7 +32,8 @@ self.addEventListener("fetch", e => {
   const url = e.request.url;
 
   /* Always pass Google Apps Script calls through — never cache */
-  if (url.includes("script.google.com")) return;
+  if (url.includes("script.google.com") || url.includes("googleusercontent.com")) return;
+
   if (url.includes("fonts.googleapis.com") || url.includes("fonts.gstatic.com")) {
     e.respondWith(
       caches.match(e.request).then(r => r || fetch(e.request).then(res => {
@@ -45,7 +50,7 @@ self.addEventListener("fetch", e => {
     e.respondWith(
       fetch(e.request)
         .then(res => { caches.open(CACHE).then(c => c.put(e.request, res.clone())); return res; })
-        .catch(() => caches.match(e.request) || caches.match("./index.html"))
+        .catch(() => caches.match(e.request).then(r => r || caches.match("./index.html")))
     );
     return;
   }
@@ -70,6 +75,5 @@ self.addEventListener("sync", e => {
 });
 
 async function syncPendingAttendance() {
-  /* Pending events stored in IndexedDB are sent here on reconnect */
   console.log("[SW] Background sync: attendance queue processing");
 }
