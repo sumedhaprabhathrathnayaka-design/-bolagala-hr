@@ -863,6 +863,8 @@ function loginOK(){
   document.getElementById('wsLogin').classList.add('hidden');
   document.getElementById('wsPinChange').classList.add('hidden');
   var app=document.getElementById('wsApp'); app.classList.remove('hidden'); app.style.display='flex';
+  // Pull latest data (approvals, notifications, etc.) from backend on login
+  if(navigator.onLine && typeof pullAll==='function'){ try{ pullAll(); }catch(e){} }
   // Restore clock-in state from stored events
   var td=today();
   var lastIn=S.events.filter(function(e){return e.wid===curW.id&&e.type==='in'&&e.date===td;}).sort(function(a,b){return b.time.localeCompare(a.time);})[0];
@@ -893,7 +895,7 @@ function wTab(btn){
   if(id==='wtLeave')renderLvHist();
   if(id==='wtAdv')renderAdvHist();
   if(id==='wtPay')updatePayslip();
-  if(id==='wtNotif')renderNotifs();
+  if(id==='wtNotif'){ if(navigator.onLine&&typeof pullAll==='function'){try{pullAll();}catch(e){}} renderNotifs(); }
 }
 function selShift(b){ document.querySelectorAll('.sft').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); }
 
@@ -1108,8 +1110,14 @@ function markRead(){
   save(); renderNotifs();
 }
 function addNotif(wid,title,body,color){
-  S.notifications.push({id:uid(),wid:wid,title:title,body:body,read:false,ts:Date.now(),color:color||'t4'});
+  var n={id:uid(),wid:wid,title:title,body:body,read:false,ts:Date.now(),color:color||'t4'};
+  S.notifications.push(n);
   save();
+  // Push to backend so the worker's device can receive it on sync
+  try{
+    var u=getBackendUrl();
+    if(u){ fetch(u,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'addNotification',payload:n})}).catch(function(){}); }
+  }catch(e){}
 }
 
 /* ══ ADMIN LOGIN ══ */
@@ -1193,8 +1201,8 @@ function renderDash(){
         +'<div class="ri-bd"><div class="ri-top"><span class="ri-nm">'+esc(w.name.split(' ')[0])+'</span><span class="bdg b-pend">pending</span></div>'
         +'<div class="ri-dt">'+(isL?esc(r.kind)+' '+esc(r.from):'Advance LKR '+fmt(r.amt))+'</div></div>'
         +'<div class="ri-ac">'
-        +(isL?'<button class="btn-ok" onclick="approveR('+r.id+')">Approve</button><button class="btn-rej" onclick="rejectR('+r.id+')">Reject</button>'
-            :'<button class="btn-ok" onclick="approveA('+r.id+')">Approve</button><button class="btn-rej" onclick="rejectR('+r.id+')">Reject</button>')
+        +(isL?'<button class="btn-ok" onclick="approveR(\''+r.id+'\')">Approve</button><button class="btn-rej" onclick="rejectR(\''+r.id+'\')">Reject</button>'
+            :'<button class="btn-ok" onclick="approveA(\''+r.id+'\')">Approve</button><button class="btn-rej" onclick="rejectR(\''+r.id+'\')">Reject</button>')
         +'</div></div>';
     }).join('');
   }
@@ -1233,7 +1241,7 @@ function renderAtt(){
     ot=Math.max(0,hrs-8);
     var rf=!oe&&checkRF(ev); if(rf)rfCount++;
     var sc=ev.shift==='A'?'b-a':ev.shift==='B'?'b-b':'b-c';
-    var phCell=ev.photo&&ev.photo.length>10?'<img src="'+ev.photo+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover;border:1.5px solid var(--t3);cursor:pointer" onclick="viewPhoto('+ev.id+')">':'<span style="color:var(--mut2);font-size:9px">--</span>';
+    var phCell=ev.photo&&ev.photo.length>10?'<img src="'+ev.photo+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover;border:1.5px solid var(--t3);cursor:pointer" onclick="viewPhoto(\''+ev.id+'\')">':'<span style="color:var(--mut2);font-size:9px">--</span>';
     var gpCell=ev.lat?'<a href="https://maps.google.com/?q='+ev.lat+','+ev.lng+'" target="_blank" style="color:var(--t5);font-size:9px;text-decoration:none"> View</a>':'<span style="color:var(--mut2);font-size:9px">--</span>';
     return '<tr'+(rf?' style="background:rgba(208,85,69,.04)"':'')+'>'+
       '<td class="mono" style="color:var(--t4)">'+esc(w.id)+'</td>'+
@@ -1316,7 +1324,7 @@ function renderPay(){
       +'<td class="mono cr">-'+fmt(epf)+'</td>'
       +'<td class="mono cw">'+((emp.adv||0)>0?'-'+fmt(emp.adv):'--')+'</td>'
       +'<td class="cn">'+fmt(net)+'</td>'
-      +'<td><button class="btn-ok btn-sm" onclick="printSlip('+emp.id+')" style="font-size:8.5px">Print</button></td>'
+      +'<td><button class="btn-ok btn-sm" onclick="printSlip(\''+emp.id+'\')" style="font-size:8.5px">Print</button></td>'
       +'</tr>';
   }).join('');
   [['fB',T.basic],['fS',T.sc],['fO',T.ot],['fA',T.al],['fG',T.gross],['fE',T.epf],['fAd',T.adv],['fN',T.net]].forEach(function(f){var el=document.getElementById(f[0]);if(el)el.textContent=fmt(f[1]);});
@@ -1382,7 +1390,7 @@ function renderReqs(){
       +'<div class="ri-bd"><div class="ri-top"><span class="ri-nm">'+esc(w.name)+'</span><span class="bdg '+bc(r.st)+'">'+r.st+'</span></div>'
       +'<div class="ri-dt"><strong>'+esc(r.kind)+'</strong> - '+esc(r.from)+(r.to&&r.to!==r.from?' to '+esc(r.to):'')+'</div>'
       +'<div class="ri-dt" style="color:var(--mut)">'+esc(r.reason||'')+'</div></div>'
-      +(r.st==='pending'?'<div class="ri-ac"><button class="btn-ok" onclick="approveR('+r.id+')">Approve</button><button class="btn-rej" onclick="rejectR('+r.id+')">Reject</button></div>':'')
+      +(r.st==='pending'?'<div class="ri-ac"><button class="btn-ok" onclick="approveR(\''+r.id+'\')">Approve</button><button class="btn-rej" onclick="rejectR(\''+r.id+'\')">Reject</button></div>':'')
       +'</div>';
   }).join(''):'<div style="padding:14px;text-align:center;font-size:11px;color:var(--mut)">No leave requests</div>';
   var aEl=document.getElementById('aReqs');
@@ -1395,7 +1403,7 @@ function renderReqs(){
       +'<div class="ri-dt" style="color:var(--mut)">'+esc(r.reason||'')+'</div>'
       +(r.st==='pending'?'<div class="adv-amt"><label>Approve LKR</label><input type="number" class="amt-inp" id="ai_'+r.id+'" value="'+r.amt+'"></div>':'')
       +'</div>'
-      +(r.st==='pending'?'<div class="ri-ac"><button class="btn-ok" onclick="approveA('+r.id+')">Approve</button><button class="btn-rej" onclick="rejectR('+r.id+')">Reject</button></div>':'')
+      +(r.st==='pending'?'<div class="ri-ac"><button class="btn-ok" onclick="approveA(\''+r.id+'\')">Approve</button><button class="btn-rej" onclick="rejectR(\''+r.id+'\')">Reject</button></div>':'')
       +'</div>';
   }).join(''):'<div style="padding:14px;text-align:center;font-size:11px;color:var(--mut)">No advance requests</div>';
   var pL=S.requests.filter(function(r){return r.type==='leave'&&r.st==='pending';}).length;
@@ -1597,7 +1605,8 @@ function pullAll(){
     if(d.workers)d.workers.forEach(function(w){var ex=S.workers.find(function(e){return e.id===w.id;});if(ex){ex.name=w.name||ex.name;ex.pos=w.pos||ex.pos;ex.dept=w.dept||ex.dept;ex.basic=w.salary||w.basic||ex.basic;ex.otRate=w.otRate!=null?w.otRate:ex.otRate;ex.adv=w.adv!=null?w.adv:ex.adv;}else S.workers.push({id:w.id,name:w.name,pos:w.pos||'Staff',dept:w.dept||'--',basic:w.salary||w.basic||0,otRate:w.otRate||0,adv:0});});
     if(d.events)d.events.forEach(function(ev){if(!S.events.find(function(e){return e.id===ev.id;}))S.events.push({id:ev.id,wid:ev.workerId||ev.wid,type:ev.type,date:ev.dateKey||ev.date,time:ev.time,shift:ev.shift||'A',photo:ev.photoUrl||ev.photo||'',lat:ev.lat,lng:ev.lng});});
     if(d.requests)d.requests.forEach(function(r){var ex=S.requests.find(function(x){return x.id===r.id;});if(ex)ex.st=r.status||r.st;else S.requests.push({id:r.id,wid:r.workerId||r.wid,type:r.t||r.type||'leave',kind:r.k||r.kind||'',from:r.f||r.from||'',to:r.to||'',reason:r.r||r.reason||'',amt:r.amt||r.amount||0,approvedAmt:r.approvedAmount||null,st:r.status||r.st||'pending',ts:r.ts||Date.now()});});
-    save(); renderDash(); renderPay(); toast('Synced from Google Sheets');
+    if(d.notifications)d.notifications.forEach(function(nt){if(!S.notifications.find(function(x){return x.id===nt.id;}))S.notifications.push({id:nt.id,wid:nt.wid||nt.workerId,title:nt.title,body:nt.body,read:false,ts:nt.ts||Date.now(),color:nt.color||'t4'});});
+    save(); renderDash(); renderPay(); if(typeof renderNotifs==='function'&&curW){try{renderNotifs();}catch(e){}} if(typeof renderReqs==='function'){try{renderReqs();}catch(e){}} toast('Synced from Google Sheets');
   }).catch(function(){toast('Sync failed');});
 }
 
