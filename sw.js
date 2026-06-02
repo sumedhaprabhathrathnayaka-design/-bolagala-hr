@@ -2,7 +2,7 @@
    Bolagala Agro Floating Resort — Service Worker v3
    Offline-first PWA for HR / Attendance System
    ================================================================ */
-const CACHE = "bolagala-hr-v4";
+const CACHE = "bolagala-hr-v5";
 const STATIC = [
   "./", "./index.html",
   "./manifest.json", "./manifest-admin.json",

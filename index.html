@@ -277,7 +277,7 @@ tfoot td.tfl{font-family:"Sora";color:var(--ink)}
 .ri-nm{font-size:11px;font-weight:700}
 .ri-dt{font-size:9px;color:var(--ink2);line-height:1.5}
 .ri-ac{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex:none}
-.amt-inp{width:80px;background:var(--sf2);border:1.5px solid var(--ln2);color:var(--ink);padding:3px 6px;border-radius:5px;font-size:10px;font-family:"JetBrains Mono";outline:none}
+.amt-inp{width:120px;background:var(--sf2);border:2px solid var(--t5);color:var(--ink);padding:7px 10px;border-radius:7px;font-size:14px;font-weight:700;font-family:"JetBrains Mono";outline:none}.amt-inp:focus{border-color:var(--t4);background:var(--sf3)}
 /* Attendance */
 .ar{display:flex;align-items:center;gap:7px;padding:6px 11px;border-bottom:1px solid var(--ln)}
 .ar:last-child{border:none}
@@ -1401,7 +1401,7 @@ function renderReqs(){
       +'<div class="ri-dt">Requested: <strong>LKR '+fmt(r.amt)+'</strong></div>'
       +(r.approvedAmt?'<div class="ri-dt" style="color:var(--t5)">Approved: LKR '+fmt(r.approvedAmt)+'</div>':'')
       +'<div class="ri-dt" style="color:var(--mut)">'+esc(r.reason||'')+'</div>'
-      +(r.st==='pending'?'<div class="adv-amt"><label>Approve LKR</label><input type="number" class="amt-inp" id="ai_'+r.id+'" value="'+r.amt+'"></div>':'')
+      +(r.st==='pending'?'<div class="adv-amt"><label style="display:block;margin-bottom:4px;font-size:11px;color:var(--t4);font-weight:600">✏️ Approve amount (change if needed):</label><div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;color:var(--mut)">LKR</span><input type="number" class="amt-inp" id="ai_'+r.id+'" value="'+r.amt+'"></div></div>':'')
       +'</div>'
       +(r.st==='pending'?'<div class="ri-ac"><button class="btn-ok" onclick="approveA(\''+r.id+'\')">Approve</button><button class="btn-rej" onclick="rejectR(\''+r.id+'\')">Reject</button></div>':'')
       +'</div>';
@@ -1425,7 +1425,7 @@ function approveA(id){
   r.st='approved'; r.approvedAmt=amt;
   var w=getW(r.wid); if(w)w.adv=(w.adv||0)+amt;
   save();
-  addNotif(r.wid,'Advance Approved','Your advance request of LKR '+fmt(r.amt)+' approved. Amount: LKR '+fmt(amt)+'.','t5');
+  addNotif(r.wid,'Advance Approved',(amt<r.amt?('Requested LKR '+fmt(r.amt)+', approved LKR '+fmt(amt)+'.'):('Your advance of LKR '+fmt(amt)+' was approved.')),'t5');
   pushSt(id,'approved',amt); toast('Advance approved: LKR '+fmt(amt)); renderReqs(); renderDash();
 }
 function rejectR(id){
